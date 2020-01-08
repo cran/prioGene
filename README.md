@@ -1,94 +1,63 @@
-# prioGene
+## prioGene: Prioritize candidate genes for complex non-communicable diseases
 
-<!-- badges: start -->
-<!-- badges: end -->
+## :writing_hand: Authors
+Erqiang Hu
 
-The goal of prioGene is to prioritize candidate genes for complex noncommunicable diseases.
+College of Bioinformatics Science and Technology, Harbin Medical University
 
-## Installation
+[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/prioGene?color=green)](https://cran.r-project.org/package=prioGene)
+![](https://cranlogs.r-pkg.org/badges/grand-total/prioGene?color=green)
+![](https://cranlogs.r-pkg.org/badges/prioGene?color=green)
+![](https://cranlogs.r-pkg.org/badges/last-week/prioGene?color=green)
 
-You can install the released version of prioGene from [CRAN](https://CRAN.R-project.org) with:
+## :arrow\_double\_down: Installation
+
+Get the development version from github:
+
+```r
+if(!requireNamespace("devtools", quietly = TRUE))
+    install.packages("devtools")
+devtools::install_github("huerqiang/prioGene")
+```
+Or  the released version from CRAN:
 
 ``` r
 install.packages("prioGene")
 ```
+-------
 
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
+## Common operations on prioGene
+```r
 library(prioGene)
-## basic example code
 ```
-```{r setup}
-library(prioGene)
 
+### 1. Construction of disease  related networks
 
-#One-step interactions with known disease-causing genes are retained in networks
-#'
-#' net: a network
-#' dise_gene: a matrix with one column of genes
-#'
-#' return: a matrix
+The function `deal_net` could get a disease-related network by retaining disease-causing genes and their One-step interaction neighbors in a human biological network.
+The parameter `net` means a human biological network, a matrix of two columns. The parameter `dise_gene` means a one-column-matrix of gene symbols obtained from the OMIM database or other disease-related databases. They need to be provided by the users.  We provide examples separately in the package: `prioGene::net` and `prioGene::dise_gene`.
+
+```r
 net_disease <- deal_net(net,dise_gene)
-
-
-#Get a one-to-many matrix of gene and GO term
-#'
-#'net_disease: a disease related network, matrix
-#'GO_human: a matrix, gene and GO terms
-#'
-#' return: a matrix
-genes_mat <- get_gene_mat(net_disease,GO_human)
-
-
-#Get a one-to-many matrix of GO term and gene
-#' net_disease: a disease related network, matrix
-#' GO_human: a matrix, gene and GO terms
-#'
-#' return: a matrix
-terms_mat <- get_term_mat(net_disease,GO_human)
-
-
-#Get the GO term for each pair of nodes in the network
-#' genes_mat: a one-to-many matrix of GO term and gene
-#' net_disease: a disease related network, matrix
-#'
-#' return: a matrix
-net_disease_term <- get_net_disease_term(genes_mat,net_disease)
-
-
-#weighting gene
-#' genes_mat: a one-to-many matrix of GO term and gene
-#'
-#' return: a matrix
-node_weight <- get_node_weight(genes_mat)
-
-
-#weighting edge
-#' net_disease_term: GO terms for each pair of nodes in the network
-#'
-#' return: a matrix
-edge_weight <- get_edge_weight(net_disease_term)
-
-
-#Q is the disease risk transition probability matrix, 
-#which is composed of transition probabilities from one gene to another
-Q <- get_Q()
-
-
-#R_0 is the vector of initial disease risk scores for all genes
-R_0<- get_R_0(dise_gene,node_weight,f=1)
-
-
-#get the result the output number is the number of iterations
-#' Q:  the disease risk transition probability matrix
-#' bet:  a parameter to measure the importance of genes and interactions
-#' R_0: the vector of initial disease risk scores for all genes
-#' node_weight: a matrix, genes and their weights
-#' threshold: a threshold for terminating iterations
-#'
-#' return: a matrix
-result <- get_R(Q,0.5,R_0,node_weight,10^(-9))
 ```
+
+###  2.  Calculation of network weights
+
+These five functions form a pipeline to weight the nodes and edges of the network based on functional information. GO function annotation information comes from `org.Hs.eg.db`.
+
+```r
+genes_mat <- get_gene_mat(net_disease)
+terms_mat <- get_term_mat(net_disease)
+net_disease_term <- get_net_disease_term(genes_mat,net_disease)
+node_weight <- get_node_weight(genes_mat)
+edge_weight <- get_edge_weight(net_disease_term,terms_mat)
+```
+
+### 3.  Prioritization of candidate genes
+
+The prioritization of candidate genes was performed based on disease risk scores of each gene obtained from an iteration process considering disease risks transferred between genes.
+
+```r
+R_0<- get_R_0(dise_gene,node_weight,f=1)
+result <- get_R(node_weight, net_disease_term, bet = 0.5, R_0 = R_0, threshold = 10^(-9))
+```
+
